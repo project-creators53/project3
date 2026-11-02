@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>探索プログラム - 線形探索と二分探索の学習</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+        }
+        .bar-transition {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-600 rounded-lg">
+                    <i data-lucide="search" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white leading-tight">探索プログラム</h1>
+                    <p class="text-xs text-slate-400">線形探索（Linear Search） vs 二分探索（Binary Search）</p>
+                </div>
+            </div>
+            <!-- Mode Switcher -->
+            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-700">
+                <button id="mode-compare-btn" onclick="setMode('compare')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors bg-indigo-600 text-white shadow">
+                    <i data-lucide="git-compare" class="w-4 h-4 inline-block mr-1"></i>同時比較
+                </button>
+                <button id="mode-linear-btn" onclick="setMode('linear')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors text-slate-400 hover:text-white">
+                    線形探索のみ
+                </button>
+                <button id="mode-binary-btn" onclick="setMode('binary')" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors text-slate-400 hover:text-white">
+                    二分探索のみ
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 flex-1 w-full flex flex-col gap-6">
+
+        <!-- Control Panel -->
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                
+                <!-- Target Input -->
+                <div>
+                    <label for="target-val" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        探す値 (Target)
+                    </label>
+                    <div class="relative">
+                        <input type="number" id="target-val" value="42" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500 font-mono text-lg">
+                        <button onclick="setRandomTarget()" class="absolute right-2 top-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-600">
+                            ランダム
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Array Size Slider -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="array-size" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">データ件数 (N)</label>
+                        <span id="array-size-val" class="text-sm font-mono font-bold text-indigo-400">16</span>
+                    </div>
+                    <input type="range" id="array-size" min="8" max="32" step="1" value="16" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" oninput="updateArraySizeLabel(this.value)">
+                </div>
+
+                <!-- Speed Control Slider -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="speed-range" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">再生速度</label>
+                        <span id="speed-val" class="text-sm font-mono text-slate-400">普通</span>
+                    </div>
+                    <input type="range" id="speed-range" min="1" max="5" value="3" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" oninput="updateSpeedLabel(this.value)">
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-2">
+                    <button onclick="generateNewArray()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-1.5 text-sm border border-slate-600">
+                        <i data-lucide="shuffle" class="w-4 h-4"></i> 新しい配列
+                    </button>
+                </div>
+            </div>
+
+            <!-- Execution Controls -->
+            <div class="mt-5 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <button id="btn-play" onclick="togglePlay()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition">
+                        <i data-lucide="play" id="play-icon" class="w-5 h-5 fill-current"></i>
+                        <span id="play-text">実行</span>
+                    </button>
+                    <button id="btn-step-back" onclick="stepBackward()" disabled class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 text-sm border border-slate-600 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <i data-lucide="step-back" class="w-4 h-4"></i> 1ステップ戻る
+                    </button>
+                    <button id="btn-step" onclick="stepForward()" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-sm border border-slate-600">
+                        <i data-lucide="step-forward" class="w-4 h-4"></i> 1ステップ進む
+                    </button>
+                    <button onclick="resetSearch()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 text-sm border border-slate-700">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> リセット
+                    </button>
+                </div>
+
+                <!-- Status Legend -->
+                <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-700 border border-slate-500 inline-block"></span>未比較</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>比較中</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>発見 (成功)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-800 opacity-40 inline-block"></span>除外範囲</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-cyan-500 inline-block"></span>探索範囲 (L/R)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Areas Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="visualizer-container">
+            
+            <!-- Linear Search Card -->
+            <div id="linear-card" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-lg font-bold text-white">線形探索 (Linear Search)</h2>
+                                <span class="bg-indigo-900/60 text-indigo-300 text-xs px-2 py-0.5 rounded border border-indigo-700 font-mono">順次探索</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">先頭から1つずつ順番に目的の値を探します（未整列でもOK）</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">比較回数</span>
+                            <span id="linear-steps" class="text-2xl font-bold font-mono text-indigo-400">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Array View Linear -->
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80 mb-4 overflow-x-auto min-h-[180px] flex items-end justify-start">
+                        <div id="linear-array-bars" class="flex items-end justify-start gap-1 min-w-full h-36 pb-1 px-3">
+                            <!-- JS Inject Bars -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log / Explanation -->
+                <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50 text-xs font-mono text-slate-300 min-h-[60px] flex items-center" id="linear-log">
+                    準備完了。「実行」または「1ステップ進む」を押してください。
+                </div>
+            </div>
+
+            <!-- Binary Search Card -->
+            <div id="binary-card" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-lg font-bold text-white">二分探索 (Binary Search)</h2>
+                                <span class="bg-emerald-900/60 text-emerald-300 text-xs px-2 py-0.5 rounded border border-emerald-700 font-mono">ソート必須</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">中央の値と比較し、探索範囲を毎回半分に絞り込みます</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 block">比較回数</span>
+                            <span id="binary-steps" class="text-2xl font-bold font-mono text-emerald-400">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Array View Binary -->
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/80 mb-4 overflow-x-auto min-h-[180px] flex items-end justify-start">
+                        <div id="binary-array-bars" class="flex items-end justify-start gap-1 min-w-full h-36 pb-1 px-3">
+                            <!-- JS Inject Bars -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log / Explanation -->
+                <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50 text-xs font-mono text-slate-300 min-h-[60px] flex items-center" id="binary-log">
+                    準備完了。「実行」または「1ステップ進む」を押してください。
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Educational Explanation Section -->
+        <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 shadow-lg">
+            <h3 class="text-md font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-indigo-400"></i>
+                高校情報Ⅰで押さえるポイント：計算量（オーダー）の比較
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-indigo-300">線形探索 (Linear Search)</h4>
+                        <span class="font-mono text-xs bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded">計算量: O(N)</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1.5 text-slate-300 text-xs leading-relaxed">
+                        <li>データが昇順・降順に<strong class="text-white">並んでいなくても使える</strong>。</li>
+                        <li>最悪の場合、全データ数 <strong class="text-indigo-300 font-mono">N</strong> 回の比較が必要。</li>
+                        <li>データ数が100倍になると、探す時間も約100倍になります。</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-emerald-300">二分探索 (Binary Search)</h4>
+                        <span class="font-mono text-xs bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded">計算量: O(log₂N)</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1.5 text-slate-300 text-xs leading-relaxed">
+                        <li>データにあらかじめ<strong class="text-white">ソート（整列）されている必要がある</strong>。</li>
+                        <li>1回の比較で探索範囲が半分（<strong class="text-emerald-300 font-mono">1/2</strong>）になる。</li>
+                        <li>データ数が100万件あっても、わずか<strong class="text-emerald-300">約20回の比較</strong>で見つけられます。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-t border-slate-800 p-4 text-center text-xs text-slate-500">
+        高校情報Ⅰ 探索プログラム（アルゴリズム学習教材 Visualizer）
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // App State Variables
+        let array = [];
+        let target = 42;
+        let arraySize = 16;
+        let speedMs = 600;
+        let mode = 'compare'; // 'compare', 'linear', 'binary'
+        
+        let isPlaying = false;
+        let timerId = null;
+
+        // History Stack for Step-Backward (Undo)
+        let historyStack = [];
+
+        // Linear Search State
+        let linearState = {
+            currentIndex: 0,
+            found: false,
+            finished: false,
+            started: false,
+            comparing: false, // 現在のインデックスを比較中かどうか
+            steps: 0,
+            log: '準備完了'
+        };
+
+        // Binary Search State
+        let binaryState = {
+            left: 0,
+            right: 0,
+            mid: -1,
+            found: false,
+            finished: false,
+            started: false,
+            comparing: false,
+            steps: 0,
+            log: '準備完了'
+        };
+
+        const speedTable = {
+            1: 1200, // 遅い
+            2: 800,
+            3: 500,  // 普通
+            4: 250,
+            5: 80   // 速い
+        };
+
+        const speedTextTable = {
+            1: 'とても遅い',
+            2: '遅い',
+            3: '普通',
+            4: '速い',
+            5: '爆速'
+        };
+
+        // DOM Elements
+        const targetInput = document.getElementById('target-val');
+        const arraySizeInput = document.getElementById('array-size');
+        const arraySizeVal = document.getElementById('array-size-val');
+        const speedRange = document.getElementById('speed-range');
+        const speedVal = document.getElementById('speed-val');
+        const btnPlay = document.getElementById('btn-play');
+        const playIcon = document.getElementById('play-icon');
+        const playText = document.getElementById('play-text');
+        const btnStepBack = document.getElementById('btn-step-back');
+
+        // Initialize App
+        window.onload = () => {
+            lucide.createIcons();
+            generateNewArray();
+            
+            targetInput.addEventListener('change', (e) => {
+                let v = parseInt(e.target.value);
+                if (isNaN(v)) v = 1;
+                target = Math.max(1, Math.min(99, v));
+                targetInput.value = target;
+                resetSearch();
+            });
+        };
+
+        function setMode(m) {
+            mode = m;
+            const compBtn = document.getElementById('mode-compare-btn');
+            const linBtn = document.getElementById('mode-linear-btn');
+            const binBtn = document.getElementById('mode-binary-btn');
+
+            const container = document.getElementById('visualizer-container');
+            const linCard = document.getElementById('linear-card');
+            const binCard = document.getElementById('binary-card');
+
+            // Reset Styles
+            [compBtn, linBtn, binBtn].forEach(b => {
+                b.className = "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors text-slate-400 hover:text-white";
+            });
+
+            if (m === 'compare') {
+                compBtn.className = "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors bg-indigo-600 text-white shadow";
+                container.className = "grid grid-cols-1 lg:grid-cols-2 gap-6";
+                linCard.classList.remove('hidden');
+                binCard.classList.remove('hidden');
+            } else if (m === 'linear') {
+                linBtn.className = "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors bg-indigo-600 text-white shadow";
+                container.className = "grid grid-cols-1 gap-6";
+                linCard.classList.remove('hidden');
+                binCard.classList.add('hidden');
+            } else if (m === 'binary') {
+                binBtn.className = "px-4 py-1.5 text-sm font-medium rounded-lg transition-colors bg-emerald-600 text-white shadow";
+                container.className = "grid grid-cols-1 gap-6";
+                linCard.classList.add('hidden');
+                binCard.classList.remove('hidden');
+            }
+
+            resetSearch();
+        }
+
+        function updateArraySizeLabel(val) {
+            arraySize = parseInt(val);
+            arraySizeVal.innerText = arraySize;
+            generateNewArray();
+        }
+
+        function updateSpeedLabel(val) {
+            speedVal.innerText = speedTextTable[val];
+            speedMs = speedTable[val];
+            if (isPlaying) {
+                pause();
+                play();
+            }
+        }
+
+        function generateNewArray() {
+            pause();
+            let set = new Set();
+            while (set.size < arraySize) {
+                set.add(Math.floor(Math.random() * 95) + 5);
+            }
+            array = Array.from(set).sort((a, b) => a - b);
+            
+            // Randomly set target to one of values or a non-existent value
+            if (Math.random() > 0.3) {
+                let randomIdx = Math.floor(Math.random() * array.length);
+                target = array[randomIdx];
+            } else {
+                target = Math.floor(Math.random() * 95) + 5;
+            }
+            targetInput.value = target;
+
+            resetSearch();
+        }
+
+        function setRandomTarget() {
+            if (Math.random() > 0.2 && array.length > 0) {
+                let randomIdx = Math.floor(Math.random() * array.length);
+                target = array[randomIdx];
+            } else {
+                target = Math.floor(Math.random() * 95) + 5;
+            }
+            targetInput.value = target;
+            resetSearch();
+        }
+
+        function resetSearch() {
+            pause();
+            historyStack = [];
+            
+            // Linear Reset
+            linearState = {
+                currentIndex: 0,
+                found: false,
+                finished: false,
+                started: false,
+                comparing: false,
+                steps: 0,
+                log: '開始前: 先頭(インデックス 0)から順に探索します。'
+            };
+
+            // Binary Reset
+            binaryState = {
+                left: 0,
+                right: array.length - 1,
+                mid: -1,
+                found: false,
+                finished: false,
+                started: false,
+                comparing: false,
+                steps: 0,
+                log: `開始前: 探索範囲は インデックス 0 〜 ${array.length - 1} です。`
+            };
+
+            updateUI();
+        }
+
+        // Save Snapshot before state update
+        function saveSnapshot() {
+            historyStack.push({
+                linearState: JSON.parse(JSON.stringify(linearState)),
+                binaryState: JSON.parse(JSON.stringify(binaryState))
+            });
+        }
+
+        // Execution Logic
+        function stepForward() {
+            let linearDone = (mode === 'binary') || linearState.finished;
+            let binaryDone = (mode === 'linear') || binaryState.finished;
+
+            if (linearDone && binaryDone) {
+                pause();
+                return false;
+            }
+
+            // Save snapshot before making a step
+            saveSnapshot();
+
+            // Step Linear
+            if ((mode === 'compare' || mode === 'linear') && !linearState.finished) {
+                stepLinear();
+            }
+
+            // Step Binary
+            if ((mode === 'compare' || mode === 'binary') && !binaryState.finished) {
+                stepBinary();
+            }
+
+            updateUI();
+
+            // Check completion after step
+            linearDone = (mode === 'binary') || linearState.finished;
+            binaryDone = (mode === 'linear') || binaryState.finished;
+
+            if (linearDone && binaryDone) {
+                pause();
+                return false;
+            }
+
+            return true;
+        }
+
+        function stepBackward() {
+            if (historyStack.length === 0) return;
+
+            pause();
+            const lastState = historyStack.pop();
+            linearState = lastState.linearState;
+            binaryState = lastState.binaryState;
+
+            updateUI();
+        }
+
+        function stepLinear() {
+            if (linearState.finished) return;
+
+            // まだ開始していない場合、まずインデックス0を比較対象としてセット
+            if (!linearState.started) {
+                linearState.started = true;
+                linearState.comparing = true;
+                linearState.steps = 1;
+                const val = array[0];
+                if (val === target) {
+                    linearState.found = true;
+                    linearState.finished = true;
+                    linearState.log = `【発見！】インデックス 0 で値 ${target} を見つけました！ (比較回数: 1回)`;
+                } else {
+                    linearState.log = `ステップ 1: インデックス 0 の値 (${val}) と ${target} を比較中... (不一致)`;
+                }
+                return;
+            }
+
+            // 比較中だった場合、次のインデックスへ移動する
+            if (linearState.comparing) {
+                linearState.currentIndex++;
+                
+                if (linearState.currentIndex >= array.length) {
+                    linearState.finished = true;
+                    linearState.comparing = false;
+                    linearState.log = `【結果】末尾まで探しましたが、値 ${target} は見つかりませんでした。(合計比較回数: ${linearState.steps}回)`;
+                    return;
+                }
+
+                linearState.steps++;
+                const val = array[linearState.currentIndex];
+                if (val === target) {
+                    linearState.found = true;
+                    linearState.finished = true;
+                    linearState.log = `【発見！】インデックス ${linearState.currentIndex} で値 ${target} を見つけました！ (比較回数: ${linearState.steps}回)`;
+                } else {
+                    linearState.log = `ステップ ${linearState.steps}: インデックス ${linearState.currentIndex} の値 (${val}) と ${target} を比較中... (不一致)`;
+                }
+            }
+        }
+
+        function stepBinary() {
+            if (binaryState.finished) return;
+
+            if (!binaryState.started) {
+                binaryState.started = true;
+            }
+
+            if (binaryState.left > binaryState.right) {
+                binaryState.finished = true;
+                binaryState.log = `【結果】探索範囲がなくなり、値 ${target} は見つかりませんでした。(合計比較回数: ${binaryState.steps}回)`;
+                return;
+            }
+
+            binaryState.steps++;
+            const mid = Math.floor((binaryState.left + binaryState.right) / 2);
+            binaryState.mid = mid;
+            const val = array[mid];
+
+            if (val === target) {
+                binaryState.found = true;
+                binaryState.finished = true;
+                binaryState.log = `【発見！】中央インデックス ${mid} で値 ${target} を見つけました！ (比較回数: ${binaryState.steps}回)`;
+            } else if (val < target) {
+                binaryState.log = `ステップ ${binaryState.steps}: 中央 array[${mid}] = ${val} < ${target} ➔ 探索範囲を右側 (インデックス ${mid + 1}〜${binaryState.right}) に絞り込みます。`;
+                binaryState.left = mid + 1;
+            } else {
+                binaryState.log = `ステップ ${binaryState.steps}: 中央 array[${mid}] = ${val} > ${target} ➔ 探索範囲を左側 (インデックス ${binaryState.left}〜${mid - 1}) に絞り込みます。`;
+                binaryState.right = mid - 1;
+            }
+
+            if (binaryState.left > binaryState.right && !binaryState.found) {
+                binaryState.finished = true;
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                pause();
+            } else {
+                play();
+            }
+        }
+
+        function play() {
+            let linearDone = (mode === 'binary') || linearState.finished;
+            let binaryDone = (mode === 'linear') || binaryState.finished;
+
+            if (linearDone && binaryDone) {
+                resetSearch();
+            }
+
+            isPlaying = true;
+            playText.innerText = "一時停止";
+            playIcon.setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+
+            timerId = setInterval(() => {
+                let hasNext = stepForward();
+                if (!hasNext) {
+                    pause();
+                }
+            }, speedMs);
+        }
+
+        function pause() {
+            isPlaying = false;
+            if (timerId) clearInterval(timerId);
+            timerId = null;
+            playText.innerText = "実行";
+            playIcon.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+        }
+
+        // Render UI
+        function updateUI() {
+            // Update Step Counts
+            document.getElementById('linear-steps').innerText = linearState.steps;
+            document.getElementById('binary-steps').innerText = binaryState.steps;
+
+            // Update Logs
+            document.getElementById('linear-log').innerText = linearState.log;
+            document.getElementById('binary-log').innerText = binaryState.log;
+
+            // Enable/Disable Step Back Button
+            if (btnStepBack) {
+                btnStepBack.disabled = historyStack.length === 0;
+            }
+
+            // Render Linear Bars
+            renderBars('linear-array-bars', 'linear');
+            // Render Binary Bars
+            renderBars('binary-array-bars', 'binary');
+        }
+
+        function renderBars(containerId, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            const maxVal = Math.max(...array, 100);
+            const isLargeArray = array.length > 20;
+
+            // モードが単体表示（線形のみ/二分のみ）の時は要素サイズをより広めにとる
+            const isSingleMode = mode !== 'compare';
+
+            array.forEach((val, idx) => {
+                const barWrapper = document.createElement('div');
+                let minWidthClass = isLargeArray ? 'min-w-[18px]' : 'min-w-[24px] max-w-[40px]';
+                if (isSingleMode) {
+                    minWidthClass = isLargeArray ? 'min-w-[24px]' : 'min-w-[36px] max-w-[64px]';
+                }
+                barWrapper.className = `flex-1 flex flex-col items-center h-full justify-end ${minWidthClass}`;
+
+                const heightPercent = Math.max(12, Math.round((val / maxVal) * 100));
+
+                let barColor = "bg-slate-700 border-slate-600";
+                let textColor = "text-slate-400";
+                let badge = "";
+
+                if (type === 'linear') {
+                    if (linearState.found && idx === linearState.currentIndex) {
+                        barColor = "bg-emerald-500 shadow-lg shadow-emerald-500/50 border-emerald-400";
+                        textColor = "text-emerald-300 font-bold";
+                        badge = "Found";
+                    } else if (linearState.started && idx === linearState.currentIndex && !linearState.finished) {
+                        barColor = "bg-amber-500 shadow-lg shadow-amber-500/50 border-amber-400 animate-pulse";
+                        textColor = "text-amber-300 font-bold";
+                        badge = "比較";
+                    } else if (linearState.started && idx < linearState.currentIndex) {
+                        barColor = "bg-slate-800 opacity-40 border-slate-700";
+                    }
+                } else if (type === 'binary') {
+                    const isMid = idx === binaryState.mid;
+                    const inRange = idx >= binaryState.left && idx <= binaryState.right;
+
+                    if (binaryState.found && isMid) {
+                        barColor = "bg-emerald-500 shadow-lg shadow-emerald-500/50 border-emerald-400";
+                        textColor = "text-emerald-300 font-bold";
+                        badge = "Found";
+                    } else if (binaryState.started && isMid && !binaryState.finished) {
+                        barColor = "bg-amber-500 shadow-lg shadow-amber-500/50 border-amber-400 animate-pulse";
+                        textColor = "text-amber-300 font-bold";
+                        badge = "Mid";
+                    } else if (inRange) {
+                        barColor = "bg-cyan-600/80 border-cyan-400";
+                        textColor = "text-cyan-200";
+                        if (idx === binaryState.left && idx === binaryState.right) badge = "L=R";
+                        else if (idx === binaryState.left) badge = "L";
+                        else if (idx === binaryState.right) badge = "R";
+                    } else {
+                        // Outside range
+                        barColor = "bg-slate-800 opacity-30 border-slate-800";
+                        textColor = "text-slate-600";
+                    }
+                }
+
+                const fontSizeClass = isLargeArray ? 'text-[9px]' : 'text-[10px] sm:text-xs';
+                const idxFontSizeClass = isLargeArray ? 'text-[7px]' : 'text-[8px]';
+
+                barWrapper.innerHTML = `
+                    <div class="h-4 flex items-center justify-center">
+                        ${badge ? `<span class="text-[8px] sm:text-[9px] font-mono leading-none px-0.5 sm:px-1 py-0.5 rounded bg-slate-900 border border-slate-700 ${textColor}">${badge}</span>` : ''}
+                    </div>
+                    <div class="w-full ${barColor} border rounded-t-md bar-transition flex items-center justify-center ${fontSizeClass} font-mono font-bold text-white shadow" style="height: ${heightPercent}%;">
+                    </div>
+                    <span class="${fontSizeClass} font-mono mt-0.5 ${textColor} leading-none">${val}</span>
+                    <span class="${idxFontSizeClass} font-mono text-slate-500 mt-0.5 leading-none">${idx}</span>
+                `;
+
+                container.appendChild(barWrapper);
+            });
+        }
+    </script>
+</body>
+</html>
